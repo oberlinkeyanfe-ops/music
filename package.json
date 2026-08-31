@@ -1,0 +1,67 @@
+{
+  "name": "music",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "prepare": "cypress install",
+    "test:e2e": "start-server-and-test preview http://localhost:4173 'cypress run --e2e'",
+    "test:e2e:dev": "start-server-and-test 'vite dev --port 4173' http://localhost:4173 'cypress open --e2e'",
+    "lint": "run-s \"lint:*\"",
+    "lint:oxlint": "oxlint . --fix",
+    "lint:eslint": "eslint . --fix --cache",
+    "format": "oxfmt src/"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "pinia": "^4.0.2",
+    "vee-validate": "^4.15.1",
+    "vue": "rc",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/eslint-plugin": "^1.6.23",
+    "@vue/test-utils": "^2.4.11",
+    "cypress": "^15.18.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-cypress": "^6.4.3",
+    "eslint-plugin-oxlint": "^1.80.0",
+    "eslint-plugin-vue": "~10.9.2",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "npm-run-all2": "^9.0.2",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.80.0",
+    "start-server-and-test": "^3.0.11",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5",
+    "vite-plugin-vue-devtools": "^8.1.5",
+    "vitest": "^4.1.10",
+    "vue-eslint-parser": "^10.4.1"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=24.12.0"
+  },
+  "overrides": {
+    "vue": "rc",
+    "@vue/compiler-core": "rc",
+    "@vue/compiler-dom": "rc",
+    "@vue/compiler-sfc": "rc",
+    "@vue/compiler-ssr": "rc",
+    "@vue/compiler-vapor": "rc",
+    "@vue/reactivity": "rc",
+    "@vue/runtime-core": "rc",
+    "@vue/runtime-dom": "rc",
+    "@vue/runtime-vapor": "rc",
+    "@vue/server-renderer": "rc",
+    "@vue/shared": "rc",
+    "@vue/compat": "rc"
+  }
+}
