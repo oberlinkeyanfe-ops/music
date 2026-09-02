@@ -4,7 +4,6 @@ export const useModalStore = defineStore("modal", {
   state: () => ({
     isOpen: false,
   }),
-
   getters: {
     hiddenClass: (state) => (state.isOpen ? "" : "hidden"),
   },
