@@ -6,10 +6,10 @@ import "firebase/firestore";
 // Remplacez ces valeurs par celles de VOTRE projet Firebase
 // (Console Firebase -> Paramètres du projet -> Vos applications -> Config)
 const firebaseConfig = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "VOTRE_PROJET.firebaseapp.com",
-  projectId: "VOTRE_PROJET",
-  appId: "VOTRE_APP_ID",
+  apiKey: "AIzaSyAS2WTL_REpbi0vV71SnkCr1qM35Y75E7U",
+  authDomain: "music-487ea.firebaseapp.com",
+  projectId: "music-487ea",
+  appId: "1:553467667180:web:a32931dedad371358fbbc9",
 };
 
 firebase.initializeApp(firebaseConfig);
