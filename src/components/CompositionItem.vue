@@ -102,7 +102,9 @@ export default {
       this.alertMessage = "Titre mis à jour.";
     },
     async deleteSong() {
-      await supabase.storage.from(SONGS_BUCKET).remove([this.song.originalName]);
+      if (this.song.originalName) {
+        await supabase.storage.from(SONGS_BUCKET).remove([this.song.originalName]);
+      }
       await songsCollection.doc(this.song.documentID).delete();
 
       this.removeSong(this.index);

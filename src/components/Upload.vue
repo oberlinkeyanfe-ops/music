@@ -102,7 +102,15 @@ export default {
       });
     },
     async uploadToSupabase(file, uploadIndex, fakeProgress) {
-      const path = `${Date.now()}-${file.name}`;
+      // Nettoie le nom de fichier : accents, espaces et caractères spéciaux
+      // peuvent casser le chemin envoyé à Supabase Storage.
+      const safeName = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // retire les accents
+        .replace(/[^a-zA-Z0-9.\-_]/g, "-") // remplace tout le reste par "-"
+        .replace(/-+/g, "-"); // évite les tirets consécutifs
+
+      const path = `${Date.now()}-${safeName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(SONGS_BUCKET)
