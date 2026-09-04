@@ -39,7 +39,8 @@
 </template>
 
 <script>
-import { storage, songsCollection, auth } from "@/includes/firebase";
+import { songsCollection, auth } from "@/includes/firebase";
+import { supabase, SONGS_BUCKET } from "@/includes/supabase";
 
 export default {
   name: "Upload",
@@ -54,13 +55,6 @@ export default {
       isDragover: false,
       uploads: [],
     };
-  },
-  beforeUnmount() {
-    this.uploads.forEach((upload) => {
-      if (upload.task && upload.task.cancel) {
-        upload.task.cancel();
-      }
-    });
   },
   methods: {
     upload(event) {
@@ -77,7 +71,6 @@ export default {
 
         if (!navigator.onLine) {
           this.uploads.push({
-            task: {},
             currentProgress: 100,
             name: file.name,
             variant: "bg-red-400",
@@ -87,13 +80,8 @@ export default {
           return;
         }
 
-        const storageRef = storage.ref();
-        const songsRef = storageRef.child(`songs/${file.name}`);
-        const task = songsRef.put(file);
-
         const uploadIndex =
           this.uploads.push({
-            task,
             currentProgress: 0,
             name: file.name,
             variant: "bg-blue-400",
@@ -101,40 +89,56 @@ export default {
             textClass: "",
           }) - 1;
 
-        task.on(
-          "state_changed",
-          (snapshot) => {
-            this.uploads[uploadIndex].currentProgress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          },
-          (error) => {
-            this.uploads[uploadIndex].variant = "bg-red-400";
-            this.uploads[uploadIndex].icon = "fas fa-times";
-            this.uploads[uploadIndex].textClass = "text-red-400";
-            console.log(error);
-          },
-          async () => {
-            this.uploads[uploadIndex].variant = "bg-green-400";
-            this.uploads[uploadIndex].icon = "fas fa-check";
-            this.uploads[uploadIndex].textClass = "text-green-400";
-
-            const song = {
-              uid: auth.currentUser.uid,
-              displayName: auth.currentUser.displayName,
-              originalName: task.snapshot.ref.name,
-              modifiedName: task.snapshot.ref.name,
-              genre: "",
-              commentCount: 0,
-              url: await task.snapshot.ref.getDownloadURL(),
-            };
-
-            const songRef = await songsCollection.add(song);
-            const songSnapshot = await songRef.get();
-
-            this.addSong(songSnapshot);
+        // Le client Supabase ne fournit pas d'événement de progression natif pour
+        // un upload simple : on simule une progression pour garder un retour visuel
+        // pendant que la requête est en cours, puis on saute à 100% à la fin.
+        const fakeProgress = setInterval(() => {
+          if (this.uploads[uploadIndex].currentProgress < 90) {
+            this.uploads[uploadIndex].currentProgress += 10;
           }
-        );
+        }, 200);
+
+        this.uploadToSupabase(file, uploadIndex, fakeProgress);
       });
+    },
+    async uploadToSupabase(file, uploadIndex, fakeProgress) {
+      const path = `${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(SONGS_BUCKET)
+        .upload(path, file, { contentType: "audio/mpeg" });
+
+      clearInterval(fakeProgress);
+
+      if (uploadError) {
+        this.uploads[uploadIndex].variant = "bg-red-400";
+        this.uploads[uploadIndex].icon = "fas fa-times";
+        this.uploads[uploadIndex].textClass = "text-red-400";
+        console.log(uploadError);
+        return;
+      }
+
+      this.uploads[uploadIndex].currentProgress = 100;
+      this.uploads[uploadIndex].variant = "bg-green-400";
+      this.uploads[uploadIndex].icon = "fas fa-check";
+      this.uploads[uploadIndex].textClass = "text-green-400";
+
+      const { data: publicUrlData } = supabase.storage.from(SONGS_BUCKET).getPublicUrl(path);
+
+      const song = {
+        uid: auth.currentUser.uid,
+        displayName: auth.currentUser.displayName,
+        originalName: path,
+        modifiedName: file.name,
+        genre: "",
+        commentCount: 0,
+        url: publicUrlData.publicUrl,
+      };
+
+      const songRef = await songsCollection.add(song);
+      const songSnapshot = await songRef.get();
+
+      this.addSong(songSnapshot);
     },
   },
 };

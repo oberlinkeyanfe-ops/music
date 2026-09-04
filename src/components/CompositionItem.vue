@@ -49,7 +49,8 @@
 
 <script>
 import { Form as VForm, Field, ErrorMessage } from "vee-validate";
-import { songsCollection, storage } from "@/includes/firebase";
+import { songsCollection } from "@/includes/firebase";
+import { supabase, SONGS_BUCKET } from "@/includes/supabase";
 
 export default {
   name: "CompositionItem",
@@ -101,10 +102,7 @@ export default {
       this.alertMessage = "Titre mis à jour.";
     },
     async deleteSong() {
-      const storageRef = storage.ref();
-      const songRef = storageRef.child(`songs/${this.song.originalName}`);
-
-      await songRef.delete();
+      await supabase.storage.from(SONGS_BUCKET).remove([this.song.originalName]);
       await songsCollection.doc(this.song.documentID).delete();
 
       this.removeSong(this.index);

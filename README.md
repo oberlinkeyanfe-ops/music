@@ -22,11 +22,12 @@ Dans le dossier du projet :
 npm install
 ```
 
+## 2. Configurer Firebase (authentification + base de données)
+
 1. Créez un projet sur https://console.firebase.google.com
 2. Activez **Authentication** → méthode "E-mail/Mot de passe"
 3. Créez une base **Firestore** (mode test pour démarrer)
-4. Activez **Storage**
-5. Dans les paramètres du projet → "Vos applications" → ajoutez une app Web,
+4. Dans les paramètres du projet → "Vos applications" → ajoutez une app Web,
    copiez la config, et collez-la dans `src/includes/firebase.js` :
 
 ```js
@@ -34,7 +35,6 @@ const firebaseConfig = {
   apiKey: "...",
   authDomain: "...",
   projectId: "...",
-  storageBucket: "...",
   appId: "...",
 };
 ```
@@ -54,24 +54,39 @@ service cloud.firestore {
 }
 ```
 
-### Règles Storage (à publier dans la console Firebase)
+## 3. Configurer Supabase (stockage des fichiers MP3)
 
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-        && request.resource.contentType == 'audio/mpeg'
-        && request.resource.size < 10 * 1024 * 1024;
-      allow delete: if request.auth != null;
-    }
-  }
-}
+Le stockage de fichiers de Firebase (Firebase Storage) exige désormais une carte
+bancaire (forfait Blaze), même s'il reste gratuit dans les quotas. Ce projet
+utilise donc **Supabase Storage** à la place — 1 Go gratuit, **aucune carte
+bancaire requise**.
+
+1. Créez un compte gratuit sur https://supabase.com et un nouveau projet
+   (choisissez un mot de passe de base de données, ce n'est pas grave si vous
+   ne l'utilisez pas — on ne se sert que du Storage ici).
+2. Dans le menu de gauche, allez dans **Storage** → **New bucket**.
+   - Nom du bucket : `songs` (doit correspondre exactement à `SONGS_BUCKET`
+     dans `src/includes/supabase.js`)
+   - Cochez **Public bucket** (pour que les fichiers soient lisibles par tous,
+     comme pour l'écoute publique des morceaux)
+3. Toujours dans **Storage** → onglet **Policies**, ajoutez une policy
+   permissive pour permettre l'upload et la suppression sans authentification
+   Supabase (l'app utilise l'authentification Firebase, pas celle de Supabase) :
+   - Cliquez sur **New Policy** → **For full customization** (ou "Create a
+     policy from scratch")
+   - Nom : `allow all (dev)` — Opération : `ALL` — Cible : `anon` et
+     `authenticated` — Expression `USING`/`WITH CHECK` : `true`
+   - **Important** : ceci équivaut au "mode test" de Firestore — pratique pour
+     développer, mais à restreindre avant une vraie mise en production.
+4. Dans **Project Settings** → **API**, copiez l'**URL** du projet et la clé
+   **anon public**. Collez-les dans `src/includes/supabase.js` :
+
+```js
+const supabaseUrl = "https://xxxxxxxx.supabase.co";
+const supabaseAnonKey = "eyJhbGciOi...";
 ```
 
-## 3. Lancer en développement
+## 4. Lancer en développement
 
 ```bash
 npm run dev
@@ -93,10 +108,14 @@ npm run preview
 ## Dépannage rapide
 
 - **Page blanche / rien ne s'affiche** : ouvrez la console du navigateur (F12).
-  Dans 90 % des cas, c'est que `src/includes/firebase.js` contient encore les
-  valeurs `VOTRE_...` non remplacées par votre vraie config Firebase.
-- **Erreur "Missing or insufficient permissions"** : les règles Firestore/Storage
-  n'ont pas été publiées dans la console Firebase (voir section 2 ci-dessus).
+  Dans la plupart des cas, c'est que `src/includes/firebase.js` ou
+  `src/includes/supabase.js` contiennent encore des valeurs `VOTRE_...` non
+  remplacées.
+- **Erreur Firestore "Missing or insufficient permissions"** : les règles
+  Firestore n'ont pas été publiées dans la console Firebase (voir section 2).
+- **L'upload de musique échoue** : vérifiez que le bucket `songs` existe bien
+  dans Supabase, qu'il est public, et que la policy "allow all" a été créée
+  (voir section 3).
 - **`npm install` échoue** : vérifiez votre version de Node (`node -v`, ≥ 18
   recommandé) et votre connexion internet.
 - **Le style Tailwind ne s'applique pas** : vérifiez que le serveur (`npm run dev`)
@@ -114,9 +133,10 @@ src/
     user.js               # inscription / connexion / déconnexion
     player.js             # lecteur audio (Howler.js)
   includes/
-    firebase.js           # config + instances Firebase (auth, db, storage, collections)
-    validation.js         # règles et messages VeeValidate
-    helper.js              # formatage du temps (mm:ss)
+    firebase.js           # config + instances Firebase (auth, db, collections)
+    supabase.js            # client Supabase (stockage des fichiers MP3)
+    validation.js          # règles et messages VeeValidate
+    helper.js               # formatage du temps (mm:ss)
   components/
     Header.vue             # navigation + liens conditionnels selon l'auth
     Auth.vue                # modale login/register avec validation complète
@@ -138,9 +158,9 @@ src/
   confirmation de mot de passe, CGU
 - Modale de connexion pilotée par un store Pinia dédié
 - Route protégée `/manage` (redirection si non connecté)
-- Upload de fichiers MP3 par glisser-déposer, avec barre de progression,
-  validation du type de fichier, gestion des erreurs et annulation à la navigation
-- Gestion des titres : édition (titre, genre), suppression (Storage + Firestore)
+- Upload de fichiers MP3 par glisser-déposer (stockage sur **Supabase**, gratuit
+  sans carte bancaire), avec barre de progression et validation du type de fichier
+- Gestion des titres : édition (titre, genre), suppression (Supabase + Firestore)
 - Page d'accueil avec défilement infini (pagination Firestore)
 - Page individuelle par titre (route dynamique `/song/:id`)
 - Commentaires : ajout, tri (récents/anciens) persistant via un query parameter
@@ -148,3 +168,8 @@ src/
   déplacement du curseur au clic
 
 ## Ce qui n'est pas inclus (voir le guide pour les détails)
+
+Internationalisation (vue-i18n), PWA (vite-plugin-pwa), tests automatisés
+(Vitest / Cypress), Composition API, patterns avancés (composants contrôlés,
+Teleport). Le guide chronologique complet fourni précédemment détaille comment
+les ajouter par-dessus cette base.
